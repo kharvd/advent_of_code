@@ -1,7 +1,6 @@
-from abc import ABC
 from dataclasses import dataclass
 import sys
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -18,12 +17,28 @@ class Condition:
         else:
             assert False
 
+    def intersect_range(self, fro: int, to: int) -> tuple[int, int]:
+        if self.op == "<":
+            return (fro, min(to, self.value - 1))
+        elif self.op == ">":
+            return (max(fro, self.value + 1), to)
+        elif self.op == "<=":
+            return (fro, min(to, self.value))
+        elif self.op == ">=":
+            return (max(fro, self.value), to)
+        else:
+            assert False
 
-class Rule(ABC):
+
+class Rule:
+    def __init__(self, condition: Optional[Condition], if_true: str):
+        self.condition = condition
+        self.if_true = if_true
+
     @staticmethod
     def parse(s: str) -> "Rule":
         if ":" not in s:
-            return UnconditionalRule(s)
+            return Rule(None, s)
 
         cond, result = s.split(":")
 
@@ -36,13 +51,7 @@ class Rule(ABC):
         else:
             assert False
 
-        return ConditionRule(condition, result.strip())
-
-
-class ConditionRule(Rule):
-    def __init__(self, condition: Condition, if_true: str):
-        self.condition = condition
-        self.if_true = if_true
+        return Rule(condition, result.strip())
 
 
 class UnconditionalRule(Rule):
@@ -80,18 +89,7 @@ class Pipeline:
 
     def collect_accepts(self, name: str) -> List[List[Condition]]:
         if name == "A":
-            return [
-                [
-                    Condition("x", ">=", 1),
-                    Condition("x", "<=", 4000),
-                    Condition("m", ">=", 1),
-                    Condition("m", "<=", 4000),
-                    Condition("a", ">=", 1),
-                    Condition("a", "<=", 4000),
-                    Condition("s", ">=", 1),
-                    Condition("s", "<=", 4000),
-                ]
-            ]
+            return [[]]
         elif name == "R":
             return []
 
@@ -100,49 +98,30 @@ class Pipeline:
         accepts: List[List[Condition]] = []
         prev_negations: List[Condition] = []
         for rule in workflow.rules:
-            if isinstance(rule, ConditionRule):
-                rule_accepts = self.collect_accepts(rule.if_true)
-                curr_accepts = [
-                    [rule.condition] + prev_negations + accept
+            rule_accepts = self.collect_accepts(rule.if_true)
+            curr_rule_condition = [rule.condition] if rule.condition else []
+            accepts.extend(
+                [
+                    curr_rule_condition + prev_negations + accept
                     for accept in rule_accepts
                 ]
+            )
+            if curr_rule_condition:
                 prev_negations.append(rule.condition.negate())
-                accepts.extend(curr_accepts)
-            elif isinstance(rule, UnconditionalRule):
-                rule_accepts = self.collect_accepts(rule.if_true)
-                accepts.extend([prev_negations + accept for accept in rule_accepts])
 
         return accepts
 
 
 def count_options(conditions: List[Condition]) -> int:
-    var_ranges = {
-        "x": [1, 4000],
-        "m": [1, 4000],
-        "a": [1, 4000],
-        "s": [1, 4000],
+    var_ranges: dict[str, tuple[int, int]] = {
+        "x": (1, 4000),
+        "m": (1, 4000),
+        "a": (1, 4000),
+        "s": (1, 4000),
     }
     for condition in conditions:
-        if condition.op == "<":
-            var_ranges[condition.var][1] = min(
-                var_ranges[condition.var][1], condition.value - 1
-            )
-        elif condition.op == ">":
-            var_ranges[condition.var][0] = max(
-                var_ranges[condition.var][0], condition.value + 1
-            )
-        elif condition.op == "<=":
-            var_ranges[condition.var][1] = min(
-                var_ranges[condition.var][1], condition.value
-            )
-        elif condition.op == ">=":
-            var_ranges[condition.var][0] = max(
-                var_ranges[condition.var][0], condition.value
-            )
-        else:
-            assert False
-
-    print(var_ranges)
+        range = var_ranges[condition.var]
+        var_ranges[condition.var] = condition.intersect_range(range[0], range[1])
 
     num_options = 1
     for var in var_ranges:
