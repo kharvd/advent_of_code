@@ -72,11 +72,6 @@ class Rule:
         return Rule(condition, result.strip())
 
 
-class UnconditionalRule(Rule):
-    def __init__(self, if_true: str):
-        self.if_true = if_true
-
-
 class Workflow:
     def __init__(self, name: str, rules: List[Rule]):
         self.name = name
