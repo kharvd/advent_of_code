@@ -30,6 +30,24 @@ class Condition:
             assert False
 
 
+class AcceptableRanges:
+    def __init__(self, ranges: dict[str, tuple[int, int]]):
+        self.ranges = ranges
+
+    def merge(self, condition: Condition) -> "AcceptableRanges":
+        new_ranges = self.ranges.copy()
+        new_ranges[condition.var] = condition.intersect_range(
+            self.ranges[condition.var][0], self.ranges[condition.var][1]
+        )
+        return AcceptableRanges(new_ranges)
+
+    def num_options(self) -> int:
+        num_options = 1
+        for var in self.ranges:
+            num_options *= self.ranges[var][1] - self.ranges[var][0] + 1
+        return num_options
+
+
 class Rule:
     def __init__(self, condition: Optional[Condition], if_true: str):
         self.condition = condition
@@ -87,51 +105,42 @@ class Pipeline:
 
         return Pipeline(workflows)
 
-    def collect_accepts(self, name: str) -> List[List[Condition]]:
+    def collect_accepts(self, name: str) -> List[AcceptableRanges]:
         if name == "A":
-            return [[]]
+            return [
+                AcceptableRanges(
+                    {
+                        "x": (1, 4000),
+                        "m": (1, 4000),
+                        "a": (1, 4000),
+                        "s": (1, 4000),
+                    }
+                )
+            ]
         elif name == "R":
             return []
 
         workflow = self.workflows[name]
 
-        accepts: List[List[Condition]] = []
+        accepts: List[AcceptableRanges] = []
         prev_negations: List[Condition] = []
         for rule in workflow.rules:
             rule_accepts = self.collect_accepts(rule.if_true)
-            curr_rule_condition = [rule.condition] if rule.condition else []
-            accepts.extend(
-                [
-                    curr_rule_condition + prev_negations + accept
-                    for accept in rule_accepts
-                ]
-            )
-            if curr_rule_condition:
+
+            for prev_neg in prev_negations:
+                rule_accepts = [accept.merge(prev_neg) for accept in rule_accepts]
+
+            if rule.condition:
+                rule_accepts = [accept.merge(rule.condition) for accept in rule_accepts]
                 prev_negations.append(rule.condition.negate())
+            accepts.extend(rule_accepts)
 
         return accepts
-
-
-def count_options(conditions: List[Condition]) -> int:
-    var_ranges: dict[str, tuple[int, int]] = {
-        "x": (1, 4000),
-        "m": (1, 4000),
-        "a": (1, 4000),
-        "s": (1, 4000),
-    }
-    for condition in conditions:
-        range = var_ranges[condition.var]
-        var_ranges[condition.var] = condition.intersect_range(range[0], range[1])
-
-    num_options = 1
-    for var in var_ranges:
-        num_options *= var_ranges[var][1] - var_ranges[var][0] + 1
-    return num_options
 
 
 pipeline = Pipeline.read()
 
 s = 0
-for ruleset in pipeline.collect_accepts("in"):
-    s += count_options(ruleset)
+for ranges in pipeline.collect_accepts("in"):
+    s += ranges.num_options()
 print(s)
