@@ -34,11 +34,12 @@ class AcceptableRanges:
     def __init__(self, ranges: dict[str, tuple[int, int]]):
         self.ranges = ranges
 
-    def merge(self, condition: Condition) -> "AcceptableRanges":
+    def merge(self, conditions: List[Condition]) -> "AcceptableRanges":
         new_ranges = self.ranges.copy()
-        new_ranges[condition.var] = condition.intersect_range(
-            self.ranges[condition.var][0], self.ranges[condition.var][1]
-        )
+        for condition in conditions:
+            new_ranges[condition.var] = condition.intersect_range(
+                new_ranges[condition.var][0], new_ranges[condition.var][1]
+            )
         return AcceptableRanges(new_ranges)
 
     def num_options(self) -> int:
@@ -122,13 +123,14 @@ class Pipeline:
         for rule in workflow.rules:
             rule_accepts = self.collect_accepts(rule.if_true)
 
-            for prev_neg in prev_negations:
-                rule_accepts = [accept.merge(prev_neg) for accept in rule_accepts]
+            for accept in rule_accepts:
+                accept = accept.merge(prev_negations)
+                if rule.condition:
+                    accept = accept.merge([rule.condition])
+                accepts.append(accept)
 
             if rule.condition:
-                rule_accepts = [accept.merge(rule.condition) for accept in rule_accepts]
                 prev_negations.append(rule.condition.negate())
-            accepts.extend(rule_accepts)
 
         return accepts
 
