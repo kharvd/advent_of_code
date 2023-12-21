@@ -17,7 +17,8 @@ def neighbors(i, j, field):
         new_i = i + di
         new_j = j + dj
         if 0 <= new_i < len(field) and 0 <= new_j < len(field[0]):
-            yield (new_i, new_j, 0, 0)
+            if field[new_i][new_j] != "#":
+                yield (new_i, new_j, 0, 0)
         elif new_i == -1:
             yield (len(field) - 1, j, -1, 0)
         elif new_i == len(field):
@@ -32,10 +33,8 @@ def find_reachable_in_one(positions, field):
     new_positions = defaultdict(set)
     for i, j in positions.keys():
         for ni, nj, fi, fj in neighbors(i, j, field):
-            if field[ni][nj] != "#":
-                old_positions = positions[(i, j)]
-                for old_fi, old_fj in old_positions:
-                    new_positions[(ni, nj)].add((old_fi + fi, old_fj + fj))
+            for old_fi, old_fj in positions[(i, j)]:
+                new_positions[(ni, nj)].add((old_fi + fi, old_fj + fj))
 
     return new_positions
 
@@ -55,11 +54,8 @@ print(start)
 
 positions = {start: {(0, 0)}}
 num_iterations = 0
-positions_for_iteration = []
 for _ in tqdm.trange(2 * 131 + 65):
-    new_positions = find_reachable_in_one(positions, field)
-    positions = new_positions
-    positions_for_iteration.append(sum(len(pos) for pos in positions.values()))
+    positions = find_reachable_in_one(positions, field)
     num_iterations += 1
 
 counts = defaultdict(int)
