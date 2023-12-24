@@ -40,17 +40,19 @@ def read_points():
 points = read_points()
 x, y, z, vx, vy, vz, t0, t1, t2 = var("x,y,z,vx,vy,vz,t0,t1,t2")
 
+init_point = Point(Vec(x, y, z), Vec(vx, vy, vz))
+
 solutions = solve(
     [
-        vx * t0 + x - points[0].x_at(t0),
-        vy * t0 + y - points[0].y_at(t0),
-        vz * t0 + z - points[0].z_at(t0),
-        vx * t1 + x - points[1].x_at(t1),
-        vy * t1 + y - points[1].y_at(t1),
-        vz * t1 + z - points[1].z_at(t1),
-        vx * t2 + x - points[2].x_at(t2),
-        vy * t2 + y - points[2].y_at(t2),
-        vz * t2 + z - points[2].z_at(t2),
+        init_point.x_at(t0) - points[0].x_at(t0),
+        init_point.y_at(t0) - points[0].y_at(t0),
+        init_point.z_at(t0) - points[0].z_at(t0),
+        init_point.x_at(t1) - points[1].x_at(t1),
+        init_point.y_at(t1) - points[1].y_at(t1),
+        init_point.z_at(t1) - points[1].z_at(t1),
+        init_point.x_at(t2) - points[2].x_at(t2),
+        init_point.y_at(t2) - points[2].y_at(t2),
+        init_point.z_at(t2) - points[2].z_at(t2),
     ],
     [x, y, z, vx, vy, vz, t0, t1, t2],
 )
