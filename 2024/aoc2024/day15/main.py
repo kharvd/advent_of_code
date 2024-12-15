@@ -89,7 +89,7 @@ def part1():
     print(compute_score(field))
 
 
-def can_move(field, pos, delta, ignore_half=False):
+def can_move(field, pos, delta):
     i, j = pos
     ty = field[i][j]
     di, dj = delta
@@ -100,15 +100,18 @@ def can_move(field, pos, delta, ignore_half=False):
     if ty == ".":
         return True
 
-    if (ty == "[" or ty == "]") and dj == 0 and not ignore_half:
+    if (ty == "[" or ty == "]") and dj == 0:
         mi, mj = (i, j + 1) if ty == "[" else (i, j - 1)
-        if not can_move(field, (mi, mj), delta, ignore_half=True):
+        if not can_move(field, (mi + di, mj + dj), delta):
             return False
 
     return can_move(field, (ni, nj), delta)
 
 
-def apply_move(field, pos, delta, ignore_half=False):
+complement = {"[": "]", "]": "["}
+
+
+def apply_move(field, pos, delta):
     i, j = pos
     ty = field[i][j]
     di, dj = delta
@@ -119,9 +122,11 @@ def apply_move(field, pos, delta, ignore_half=False):
     if ty == ".":
         return (i, j)
 
-    if (ty == "[" or ty == "]") and dj == 0 and not ignore_half:
+    if (ty == "[" or ty == "]") and dj == 0:
         mi, mj = (i, j + 1) if ty == "[" else (i, j - 1)
-        apply_move(field, (mi, mj), delta, ignore_half=True)
+        apply_move(field, (mi + di, mj + dj), delta)
+        field[mi][mj] = "."
+        field[mi + di][mj + dj] = complement[ty]
 
     apply_move(field, (ni, nj), delta)
     field[i][j] = "."
