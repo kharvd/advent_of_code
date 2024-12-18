@@ -1,5 +1,19 @@
-Register A: 729
+Register A: 5
 Register B: 0
 Register C: 0
 
-Program: 0,1,5,4,3,0
+Program: 2,4,1,7,7,5,0,3,4,0,1,7,5,5,3,0
+
+int a = 62769524;
+int b = 0;
+int c = 0;
+
+do {
+    b = a % 8;
+    b ^= 7;
+    c = a / b;
+    a = a / 3;
+    b ^= c;
+    b ^= 7;
+    printf("%d,", b % 8);
+} while (a != 0)
