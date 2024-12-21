@@ -25,27 +25,23 @@ def advance_field(field, d, inp):
 
 
 def advance(state, inp):
-    d1, d2, n = state
-    clicked1, clicked2, clicked3 = None, None, None
-    nd1, clicked1 = advance_field(directional, d1, inp)
-    if nd1 is None:
-        return None, clicked1, clicked2, clicked3
-    if clicked1 is None:
-        return (nd1, d2, n), clicked1, clicked2, clicked3
+    ds = list(state)
+    clickeds = [None] * len(ds)
 
-    nd2, clicked2 = advance_field(directional, d2, clicked1)
-    if nd2 is None:
-        return None, clicked1, clicked2, clicked3
-    if clicked2 is None:
-        return (nd1, nd2, n), clicked1, clicked2, clicked3
+    last_clicked = inp
+    for i in range(len(ds)):
+        ndi, clicked_i = advance_field(
+            directional if i < len(ds) - 1 else numerical, ds[i], last_clicked
+        )
+        if ndi is None:
+            return None, None
+        ds = ds[:i] + [ndi] + ds[i + 1 :]
+        if clicked_i is None:
+            return tuple(ds), clickeds
+        clickeds[i] = clicked_i
+        last_clicked = clicked_i
 
-    nn, clicked3 = advance_field(numerical, n, clicked2)
-    if nn is None:
-        return None, clicked1, clicked2, clicked3
-    if clicked3 is None:
-        return (nd1, nd2, nn), clicked1, clicked2, clicked3
-
-    return (nd1, nd2, nn), clicked1, clicked2, clicked3
+    return tuple(ds), clickeds
 
 
 def decode_field(field, d):
@@ -53,17 +49,17 @@ def decode_field(field, d):
 
 
 def decode_state(state):
-    d1, d2, n = state
-    return (
-        decode_field(directional, d1),
-        decode_field(directional, d2),
-        decode_field(numerical, n),
-    )
+    res = []
+    for d in state[:-1]:
+        res.append(decode_field(directional, d))
+    res.append(decode_field(numerical, state[-1]))
+
+    return tuple(res)
 
 
 def neighbors(state):
     for inp in delta_dir.keys():
-        new_state, c1, c2, c3 = advance(state, inp)
+        new_state, _ = advance(state, inp)
         if new_state is not None:
             yield inp, new_state
 
@@ -90,36 +86,32 @@ def read_input():
     return [l.strip() for l in sys.stdin.readlines()]
 
 
-def encode_num(num):
+def encode_num(num, num_directional):
     ni, nj = None, None
     for i in range(len(numerical)):
         for j in range(len(numerical[0])):
             if numerical[i][j] == num:
                 ni, nj = i, j
                 break
-    return (dir_start, dir_start, (ni, nj))
+    return tuple([*([dir_start] * num_directional), (ni, nj)])
 
 
 def execute_program(state, program):
-    clicked1 = []
-    clicked2 = []
-    clicked3 = []
+    clicked = []
     for c in program:
-        state, c1, c2, c3 = advance(state, c)
-        if c1:
-            clicked1.append(c1)
-        if c2:
-            clicked2.append(c2)
-        if c3:
-            clicked3.append(c3)
-    return state, (clicked1, clicked2, clicked3)
+        state, cl = advance(state, c)
+        if cl is not None:
+            print(cl)
+        if cl is not None and cl[-1] is not None:
+            clicked.extend(cl[-1])
+    return state, clicked
 
 
-def find_sequence(nums):
+def find_sequence(nums, num_directional):
     seq = []
-    state = (dir_start, dir_start, num_start)
+    state = encode_num("A", num_directional)
     for num in nums:
-        end = encode_num(num)
+        end = encode_num(num, num_directional)
         seq.extend(bfs(state, end))
         seq.append("A")
         state = end
@@ -129,7 +121,17 @@ def find_sequence(nums):
 def part1():
     total = 0
     for code in read_input():
-        seq = find_sequence(code)
+        seq = find_sequence(code, 2)
+        complexity = len(seq) * int(code[:3])
+        total += complexity
+
+    print(total)
+
+
+def part2():
+    total = 0
+    for code in read_input():
+        seq = find_sequence(code, 25)
         complexity = len(seq) * int(code[:3])
         total += complexity
 
