@@ -39,17 +39,58 @@ def bits_to_int(bits):
     return x
 
 
-def part1():
-    inputs, outputs = read_input()
+def draw_circuit(outputs):
+    from graphviz import Digraph
+
+    dot = Digraph(comment="Simple Graph Example")
+    for out, (op, a, b) in outputs.items():
+        dot.node(out, f"{out} ({op})")
+        dot.edge(a, out)
+        dot.edge(b, out)
+    dot.render("graph", format="svg", cleanup=True)
+
+
+def compute_z(inputs, outputs):
     z_values = {}
     for name in outputs.keys():
         if name[0] == "z":
             z_values[int(name[1:])] = compute(inputs, outputs, name)
-    print(bits_to_int(z_values))
+    return bits_to_int(z_values)
+
+
+def part1():
+    inputs, outputs = read_input()
+    print(compute_z(inputs, outputs))
+
+
+def encode_input(x, y):
+    inputs = {}
+    for i in range(45):
+        inputs[f"x{i:02}"] = bool(x & (1 << i))
+        inputs[f"y{i:02}"] = bool(y & (1 << i))
+    return inputs
 
 
 def part2():
-    pass
+    inputs, outputs = read_input()
+    # draw_circuit(outputs)
+
+    outputs["svm"], outputs["nbc"] = outputs["nbc"], outputs["svm"]
+    outputs["z15"], outputs["kqk"] = outputs["kqk"], outputs["z15"]
+    outputs["z23"], outputs["cgq"] = outputs["cgq"], outputs["z23"]
+    outputs["z39"], outputs["fnr"] = outputs["fnr"], outputs["z39"]
+
+    # check single bit additions
+    for i in range(45):
+        x = 1 << i
+        y = 1 << i
+        inputs = encode_input(x, y)
+        z = compute_z(inputs, outputs)
+        if x + y != z:
+            print(i, x, y, z)
+            # print(compute(inputs, outputs, "z06"))
+
+    print(",".join(sorted(["svm", "nbc", "z15", "kqk", "z23", "cgq", "z39", "fnr"])))
 
 
 if __name__ == "__main__":
